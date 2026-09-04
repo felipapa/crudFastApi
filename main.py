@@ -1,6 +1,10 @@
 from base import get_connection, initDb
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from pydantic import BaseModel
+from sqlite3 import Connection
+from productosmanager import productosmanager2
+
+productosmana = productosmanager2()
 
 
 class Producto(BaseModel):
@@ -25,41 +29,21 @@ def startup():
 
 
 @app.post("/agregar")
-def postProduct(producto: Producto):
-    conexion = (get_connection())  
-    conexion.execute("INSERT INTO productos (nombre, stock, precio) VALUES (?, ?, ?)",
-    (producto.nombre, producto.stock, producto.precio),
-    )
-    conexion.commit()
-    conexion.close()
-    return f"guardado en la db {producto}"
+def postProduct(producto: Producto, conexion: Connection = Depends(get_connection)):
+    return productosmana.agregarProducto(producto, conexion)
 
 @app.get("/leer_productos")
-def getproductos():
-    conexion = get_connection()
-    res = conexion.execute("SELECT * FROM productos").fetchall()
-    return [dict(item) for item in res]
+def getproductos(conexion: Connection = Depends(get_connection)):
+    return productosmana.leerProducto(conexion)
 
 @app.delete("/eliminar_productos/{id}")
-def deletproductos(id: int):
-    conexion = get_connection()
-    conexion.execute("DELETE FROM productos WHERE id = ?", (id,))
-    conexion.commit()
-    conexion.close()
-    return f"se elimino {id}"
+def deletproductos(id: int, conexion: Connection = Depends(get_connection)):
+    return productosmana.eliminar(id, conexion)
 
 #actualizar
 @app.put("/actualizarproducto/{id}")
-def actualizarproducto(producto: Producto2):
-    conexion = get_connection()
-    nuevonombre = producto.nombre 
-    nuevostock = producto.stock
-    nuevoprecio = producto.precio 
-    id = producto.id
-    conexion.execute("UPDATE productos SET nombre = ?, stock = ?, precio = ?  WHERE id = ?", (nuevonombre, nuevostock, nuevoprecio, id))
-    conexion.commit()
-    conexion.close()
-    return f"se actualizo {id}"
+def actualizarproducto(producto: Producto2, conexion: Connection = Depends(get_connection)):
+    return productosmana.actualizar(producto, conexion) 
     
 @app.get("/")
 def read_root():
